@@ -64,7 +64,8 @@ function App() {
       websocket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'stats_update') {
-          setStats(data.stats); return;
+          setStats(data.stats); 
+          return;
         }
         switch (data.type) {
           case 'waiting_update':
@@ -101,6 +102,8 @@ function App() {
             setMessage(data.message);
             setTimeout(() => setMessage(''), 3000);
             break;
+          default:
+            break;
         }
       };
       setWs(websocket);
@@ -115,7 +118,7 @@ function App() {
   const handleLogin = async (credentials) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials)
       });
@@ -129,7 +132,7 @@ function App() {
   const handleSignup = async (userData) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      const response = await fetch(`${API_BASE_URL}/api/signup`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
