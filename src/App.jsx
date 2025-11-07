@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import "./App.css"; // This now matches the CSS you provided
+import "./App.css";
 import LoginPage from "./LoginPage";
 import CategoryPage from "./CategoryPage";
 
@@ -390,9 +390,10 @@ function App() {
             <div className="leaderboard" style={{ marginTop: "32px" }}>
               <h4>Final Scores:</h4>
               <div className="leaderboard-list">
+                {/* ⭐️ ---- FIX: Changed ...map to .map ---- ⭐️ */}
                 {gameState.results
                   .sort((a, b) => b.score - a.score)
-                  ...map((player, index) => (
+                  .map((player, index) => (
                     <div
                       key={player.username}
                       className={`leaderboard-item ${
@@ -475,11 +476,10 @@ function App() {
               </button>
             </div>
 
-            {/* ⭐️ ---- FIX: CHANGED TO 1fr TO STACK IN ROWS ---- ⭐️ */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr", // <-- Forces 1 column (stacks them)
+                gridTemplateColumns: "1fr", // Stacks in 1 column (rows)
                 gap: "24px",
               }}
             >
