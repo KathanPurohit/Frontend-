@@ -70,7 +70,6 @@ function App() {
   // ---- WebSocket lifecycle ----
   useEffect(() => {
     if (user?.username) {
-      // sessionStorage.setItem("user", JSON.stringify(user)); // <-- REMOVED from here
       const websocket = new WebSocket(`${WS_BASE_URL}/ws/${user.username}`);
 
       websocket.onopen = () => setConnectionStatus("Connected");
@@ -128,7 +127,6 @@ function App() {
             }));
             const my = data.results.find((r) => r.username === user.username);
             if (my && my.new_total_score !== undefined) {
-              // This line was already correct!
               setUser((prev) => ({ ...prev, score: my.new_total_score }));
             }
             loadLeaderboard();
@@ -147,19 +145,17 @@ function App() {
 
       setWs(websocket);
       return () => websocket.close();
-    } else {
-      // sessionStorage.removeItem("user"); // <-- REMOVED from here
     }
   }, [user?.username, WS_BASE_URL]);
 
-  // ⭐️ ---- FIX 1: ADDED THIS EFFECT TO SYNC STATE TO SESSION STORAGE ---- ⭐️
+  // ---- Sync State to Session Storage ----
   useEffect(() => {
     if (user) {
       sessionStorage.setItem("user", JSON.stringify(user));
     } else {
       sessionStorage.removeItem("user");
     }
-  }, [user]); // This runs EVERY time the user object changes (including score)
+  }, [user]);
 
   // ---- Initial data fetch ----
   useEffect(() => {
@@ -285,7 +281,7 @@ function App() {
     );
   }
 
-  // ---- WAITING VIEW (Uses .waiting class from your CSS) ----
+  // ---- WAITING VIEW ----
   if (currentView === "waiting") {
     return (
       <div className="app">
@@ -319,7 +315,7 @@ function App() {
     );
   }
 
-  // ---- PLAYING VIEW (Uses .game, .puzzle-container, etc. from your CSS) ----
+  // ---- PLAYING VIEW ----
   if (currentView === "playing") {
     return (
       <div className="app">
@@ -378,7 +374,7 @@ function App() {
     );
   }
 
-  // ---- FINISHED VIEW (Uses .finished class from your CSS) ----
+  // ---- FINISHED VIEW ----
   if (currentView === "finished") {
     return (
       <div className="app">
@@ -396,7 +392,7 @@ function App() {
               <div className="leaderboard-list">
                 {gameState.results
                   .sort((a, b) => b.score - a.score)
-                  .map((player, index) => (
+                  ...map((player, index) => (
                     <div
                       key={player.username}
                       className={`leaderboard-item ${
@@ -444,7 +440,6 @@ function App() {
               Welcome, <strong>{user.username}</strong>
             </p>
             <p>
-              {/* This will now be correctly in sync */}
               Score: <strong>{user.score || 0}</strong>
             </p>
             <p
@@ -480,11 +475,11 @@ function App() {
               </button>
             </div>
 
-            {/* ⭐️ ---- FIX 2: MODIFIED THE gridTemplateColumns STYLE ---- ⭐️ */}
+            {/* ⭐️ ---- FIX: CHANGED TO 1fr TO STACK IN ROWS ---- ⭐️ */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr", // <-- Forces 2 columns
+                gridTemplateColumns: "1fr", // <-- Forces 1 column (stacks them)
                 gap: "24px",
               }}
             >
