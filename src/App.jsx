@@ -1,22 +1,22 @@
+// mindmaze-frontend/src/App.jsx
 import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 import LoginPage from "./LoginPage";
 import CategoryPage from "./CategoryPage";
 
 function App() {
-  // === User State Management ===
+  // ---- User State ----
   const [user, setUser] = useState(() => {
     const savedUser = sessionStorage.getItem("user");
     try {
       return savedUser ? JSON.parse(savedUser) : null;
-    } catch (e) {
-      console.error("Failed to parse user from sessionStorage", e);
+    } catch {
       sessionStorage.removeItem("user");
       return null;
     }
   });
 
-  // === Game & App State ===
+  // ---- App/Game State ----
   const [ws, setWs] = useState(null);
   const [currentView, setCurrentView] = useState(user ? "menu" : "login");
   const [gameState, setGameState] = useState({
@@ -28,14 +28,12 @@ function App() {
     results: [],
     winner: null,
   });
-  const [lobbyState, setLobbyState] = useState({
-    playerCount: 0,
-    maxPlayers: 8,
-  });
+  const [lobbyState, setLobbyState] = useState({ playerCount: 0, maxPlayers: 8 });
   const [answer, setAnswer] = useState("");
   const [answerResult, setAnswerResult] = useState(null);
   const [timer, setTimer] = useState(30);
   const timerRef = useRef(null);
+
   const [leaderboard, setLeaderboard] = useState([]);
   const [message, setMessage] = useState("");
   const [stats, setStats] = useState({});
@@ -44,11 +42,18 @@ function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // === Backend URLs (Local + Production) ===
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "https://backend-y4l4.onrender.com";
-  const WS_BASE_URL = import.meta.env.VITE_WS_URL || "wss://backend-y4l4.onrender.com";
+  // ---- API / WS URLs (Render-friendly with fallback to local) ----
+  const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "https://backend-y4l4.onrender.com";
 
-  // === Timer Control ===
+  const computedWSBase =
+    API_BASE_URL.startsWith("https")
+      ? API_BASE_URL.replace("https", "wss")
+      : API_BASE_URL.replace("http", "ws");
+
+  const WS_BASE_URL = import.meta.env.VITE_WS_URL || computedWSBase;
+
+  // ---- Timer for playing view ----
   useEffect(() => {
     if (currentView === "playing") {
       timerRef.current = setInterval(() => {
@@ -64,12 +69,12 @@ function App() {
     }
   }, [timer, currentView, answerResult, ws]);
 
-  // === WebSocket Setup ===
+  // ---- WebSocket lifecycle ----
   useEffect(() => {
-    if (user && user.username) {
+    if (user?.username) {
       sessionStorage.setItem("user", JSON.stringify(user));
-
       const websocket = new WebSocket(`${WS_BASE_URL}/ws/${user.username}`);
+
       websocket.onopen = () => setConnectionStatus("Connected");
       websocket.onclose = () => setConnectionStatus("Disconnected");
       websocket.onerror = () => setConnectionStatus("Error");
@@ -123,14 +128,9 @@ function App() {
               results: data.results,
               winner: data.winner,
             }));
-            const myResult = data.results.find(
-              (r) => r.username === user.username
-            );
-            if (myResult && myResult.new_total_score !== undefined) {
-              setUser((prevUser) => ({
-                ...prevUser,
-                score: myResult.new_total_score,
-              }));
+            const my = data.results.find((r) => r.username === user.username);
+            if (my && my.new_total_score !== undefined) {
+              setUser((prev) => ({ ...prev, score: my.new_total_score }));
             }
             loadLeaderboard();
             break;
@@ -147,35 +147,33 @@ function App() {
       };
 
       setWs(websocket);
-      return () => {
-        websocket.close();
-      };
+      return () => websocket.close();
     } else {
       sessionStorage.removeItem("user");
     }
   }, [user?.username]);
 
-  // === Load Leaderboard and Stats on Mount ===
+  // ---- Initial data fetch ----
   useEffect(() => {
     loadLeaderboard();
     loadStats();
   }, []);
 
-  // === API Calls ===
+  // ---- API Calls ----
   const handleLogin = async (credentials) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login`, {
+      const res = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
-      if (response.ok) {
-        const data = await response.json();
+      if (res.ok) {
+        const data = await res.json();
         setUser(data.user);
-        setCurrentView("menu"); // ✅ Go to home after login
+        setCurrentView("menu"); // Home after login
       } else {
-        const err = await response.json();
+        const err = await res.json();
         setMessage(err.detail || "Login failed");
       }
     } catch {
@@ -188,17 +186,17 @@ function App() {
   const handleSignup = async (userData) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/signup`, {
+      const res = await fetch(`${API_BASE_URL}/api/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
-      if (response.ok) {
-        const data = await response.json();
+      if (res.ok) {
+        const data = await res.json();
         setUser(data.user);
-        setCurrentView("menu"); // ✅ Go to home after signup
+        setCurrentView("menu"); // Home after signup
       } else {
-        const err = await response.json();
+        const err = await res.json();
         setMessage(err.detail || "Signup failed");
       }
     } catch {
@@ -208,16 +206,33 @@ function App() {
     }
   };
 
-  // === Game Functions ===
+  const loadLeaderboard = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/leaderboard`);
+      if (res.ok) setLeaderboard(await res.json());
+    } catch {}
+  };
+
+  const loadStats = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/stats`);
+      if (res.ok) setStats(await res.json());
+    } catch {}
+  };
+
+  // ---- Game actions ----
   const findMatch = () => setCurrentView("categories");
+
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
     if (ws) ws.send(JSON.stringify({ type: "find_match", category: category.id }));
   };
+
   const handleBackToHome = () => {
     setCurrentView("menu");
     setMessage("");
   };
+
   const submitAnswer = (e) => {
     e.preventDefault();
     if (ws && answer.trim()) {
@@ -225,30 +240,20 @@ function App() {
       setAnswer("");
     }
   };
+
   const cancelSearch = () => {
     if (ws) ws.send(JSON.stringify({ type: "cancel_search" }));
     setCurrentView("categories");
     setMessage("");
   };
-  const loadLeaderboard = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/leaderboard`);
-      if (response.ok) setLeaderboard(await response.json());
-    } catch {}
-  };
-  const loadStats = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/stats`);
-      if (response.ok) setStats(await response.json());
-    } catch {}
-  };
+
   const logout = () => {
     setUser(null);
     setCurrentView("login");
   };
 
-  // === View Rendering ===
-  if (!user)
+  // ---- Views ----
+  if (!user) {
     return (
       <LoginPage
         isLogin={isLogin}
@@ -259,8 +264,9 @@ function App() {
         isLoading={isLoading}
       />
     );
+  }
 
-  if (currentView === "categories")
+  if (currentView === "categories") {
     return (
       <CategoryPage
         onSelectCategory={handleCategorySelect}
@@ -268,11 +274,13 @@ function App() {
         user={user}
       />
     );
+  }
 
-  // === Home/Menu Screen ===
+  // ---- HOME / MENU (Two-column dashboard using your existing CSS) ----
   return (
     <div className="app">
       <div className="container">
+        {/* Header */}
         <div className="app-header">
           <h1>🧠 MindMaze</h1>
           <button className="logout-btn" onClick={logout}>
@@ -280,32 +288,122 @@ function App() {
           </button>
         </div>
 
-        <div className="home-section">
-          <h2>Welcome, {user.username}!</h2>
+        {/* User Info Bar */}
+        <div className="user-info">
+          <p>
+            Welcome, <strong>{user.username}</strong>
+          </p>
+          <p>
+            Score: <strong>{user.score || 0}</strong>
+          </p>
+          <p
+            className={`status ${
+              connectionStatus.toLowerCase() === "connected"
+                ? "connected"
+                : connectionStatus.toLowerCase() === "error"
+                ? "error"
+                : "disconnected"
+            }`}
+          >
+            {connectionStatus}
+          </p>
+        </div>
 
-          <div className="home-stats">
-            <p>Total Games Played: {stats.total_games || 0}</p>
-            <p>Total Wins: {stats.total_wins || 0}</p>
-            <p>Your Score: {user.score || 0}</p>
+        {/* Optional banner message */}
+        {message && <div className="message-banner">{message}</div>}
+
+        {/* Main menu content */}
+        <div className="menu">
+          {/* Actions */}
+          <div className="menu-actions">
+            <button className="play-button" onClick={findMatch}>
+              🚀 Start Challenge
+            </button>
+            <button className="refresh-button" onClick={() => { loadStats(); loadLeaderboard(); }}>
+              🔄 Refresh
+            </button>
           </div>
 
-          <button className="play-btn" onClick={findMatch}>
-            🎮 Play Game
-          </button>
-
-          <h3>🏆 Leaderboard</h3>
-          <div className="leaderboard">
-            {leaderboard.length > 0 ? (
-              leaderboard.map((p, idx) => (
-                <div key={idx} className="leaderboard-item">
-                  <span>{idx + 1}. {p.username}</span>
-                  <span>{p.score}</span>
+          {/* Two-column: Stats (left) + Leaderboard (right) */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: "24px",
+            }}
+          >
+            {/* Stats Card */}
+            <div className="stats">
+              <h3>📊 Live Stats</h3>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <span className="stat-label">Total Users</span>
+                  <span className="stat-value">{stats.total_users || 0}</span>
                 </div>
-              ))
-            ) : (
-              <p>No players yet.</p>
-            )}
+                <div className="stat-item">
+                  <span className="stat-label">Active Games</span>
+                  <span className="stat-value">{stats.active_games || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Online Now</span>
+                  <span className="stat-value">{stats.connected_players || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Leaderboard Card */}
+            <div className="leaderboard">
+              <h3>🏆 Leaderboard</h3>
+              {leaderboard.length === 0 ? (
+                <p className="no-players">No players yet.</p>
+              ) : (
+                <div className="leaderboard-list">
+                  {leaderboard.map((player, index) => (
+                    <div key={player.username || index} className="leaderboard-item">
+                      <span className="rank">#{index + 1}</span>
+                      <span className="username">{player.username}</span>
+                      <span className="score">{player.score || 0} pts</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Floating WebSocket Indicator (Option C) */}
+        <div
+          style={{
+            position: "fixed",
+            right: "18px",
+            bottom: "18px",
+            background:
+              connectionStatus === "Connected"
+                ? "rgba(34, 197, 94, 0.2)"
+                : connectionStatus === "Error"
+                ? "rgba(245, 158, 11, 0.2)"
+                : "rgba(239, 68, 68, 0.2)",
+            color:
+              connectionStatus === "Connected"
+                ? "#4ade80"
+                : connectionStatus === "Error"
+                ? "#fbbf24"
+                : "#f87171",
+            border:
+              connectionStatus === "Connected"
+                ? "1px solid rgba(34, 197, 94, 0.3)"
+                : connectionStatus === "Error"
+                ? "1px solid rgba(245, 158, 11, 0.3)"
+                : "1px solid rgba(239, 68, 68, 0.3)",
+            padding: "8px 12px",
+            borderRadius: "999px",
+            backdropFilter: "blur(10px)",
+            fontSize: "0.85rem",
+            zIndex: 50,
+          }}
+        >
+          {connectionStatus === "Connected" ? "🟢" : connectionStatus === "Error" ? "🟠" : "🔴"}{" "}
+          {connectionStatus}
         </div>
       </div>
     </div>
