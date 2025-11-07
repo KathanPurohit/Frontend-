@@ -17,7 +17,7 @@ function App() {
 
   // ---- App/Game State ----
   const [ws, setWs] = useState(null);
-  const [currentView, setCurrentView] = useState("menu"); // ✅ Default to menu (same as working version)
+  const [currentView, setCurrentView] = useState("menu");
   const [gameState, setGameState] = useState({
     players: [],
     question: "",
@@ -39,16 +39,15 @@ function App() {
   const [connectionStatus, setConnectionStatus] = useState("Disconnected");
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null); // Added this state to track category
 
   // ---- API / WS URLs ----
   const API_BASE_URL =
     import.meta.env.VITE_API_URL || "https://backend-y4l4.onrender.com";
 
-  const computedWSBase =
-    API_BASE_URL.startsWith("https")
-      ? API_BASE_URL.replace("https", "wss")
-      : API_BASE_URL.replace("http", "ws");
+  const computedWSBase = API_BASE_URL.startsWith("https")
+    ? API_BASE_URL.replace("https", "wss")
+    : API_BASE_URL.replace("http", "ws");
 
   const WS_BASE_URL = import.meta.env.VITE_WS_URL || computedWSBase;
 
@@ -135,7 +134,7 @@ function App() {
             break;
 
           case "match_failed":
-            setCurrentView("categories");
+            setCurrentView("categories"); // Go back to categories
             setMessage(data.message);
             setTimeout(() => setMessage(""), 3000);
             break;
@@ -150,7 +149,7 @@ function App() {
     } else {
       sessionStorage.removeItem("user");
     }
-  }, [user?.username]);
+  }, [user?.username, WS_BASE_URL]); // Added WS_BASE_URL to dependency array
 
   // ---- Initial data fetch ----
   useEffect(() => {
@@ -223,7 +222,7 @@ function App() {
   const findMatch = () => setCurrentView("categories");
 
   const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
+    setSelectedCategory(category); // Keep track of the selected category
     if (ws) ws.send(JSON.stringify({ type: "find_match", category: category.id }));
   };
 
@@ -248,7 +247,7 @@ function App() {
 
   const logout = () => {
     setUser(null);
-    setCurrentView("login");
+    setCurrentView("login"); // Go to login, not just set user to null
   };
 
   // ---- Views ----
@@ -271,146 +270,275 @@ function App() {
         onSelectCategory={handleCategorySelect}
         onBackToHome={handleBackToHome}
         user={user}
+        // Pass message to CategoryPage if you want to show "match_failed"
+        message={message}
       />
     );
   }
 
-  // ---- HOME / MENU ----
-  return (
-    <div className="app">
-      <div className="container">
-        {/* Header */}
-        <div className="app-header">
-          <h1>🧠 MindMaze</h1>
-          <button className="logout-btn" onClick={logout}>
-            Logout
-          </button>
-        </div>
-
-        {/* User Info */}
-        <div className="user-info">
-          <p>
-            Welcome, <strong>{user.username}</strong>
-          </p>
-          <p>
-            Score: <strong>{user.score || 0}</strong>
-          </p>
-          <p
-            className={`status ${
-              connectionStatus.toLowerCase() === "connected"
-                ? "connected"
-                : connectionStatus.toLowerCase() === "error"
-                ? "error"
-                : "disconnected"
-            }`}
-          >
-            {connectionStatus}
-          </p>
-        </div>
-
-        {/* Banner */}
-        {message && <div className="message-banner">{message}</div>}
-
-        {/* Menu */}
-        <div className="menu">
-          <div className="menu-actions">
-            <button className="play-button" onClick={findMatch}>
-              🚀 Start Challenge
-            </button>
-            <button
-              className="refresh-button"
-              onClick={() => {
-                loadStats();
-                loadLeaderboard();
-              }}
-            >
-              🔄 Refresh
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "24px",
-            }}
-          >
-            {/* Stats */}
-            <div className="stats">
-              <h3>📊 Live Stats</h3>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <span className="stat-label">Total Users</span>
-                  <span className="stat-value">{stats.total_users || 0}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">Active Games</span>
-                  <span className="stat-value">{stats.active_games || 0}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">Online Now</span>
-                  <span className="stat-value">{stats.connected_players || 0}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Leaderboard */}
-            <div className="leaderboard">
-              <h3>🏆 Leaderboard</h3>
-              {leaderboard.length === 0 ? (
-                <p className="no-players">No players yet.</p>
-              ) : (
-                <div className="leaderboard-list">
-                  {leaderboard.map((player, index) => (
-                    <div key={player.username || index} className="leaderboard-item">
-                      <span className="rank">#{index + 1}</span>
-                      <span className="username">{player.username}</span>
-                      <span className="score">{player.score || 0} pts</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* WebSocket Status Bubble */}
-        <div
-          style={{
-            position: "fixed",
-            right: "18px",
-            bottom: "18px",
-            background:
-              connectionStatus === "Connected"
-                ? "rgba(34, 197, 94, 0.2)"
-                : connectionStatus === "Error"
-                ? "rgba(245, 158, 11, 0.2)"
-                : "rgba(239, 68, 68, 0.2)",
-            color:
-              connectionStatus === "Connected"
-                ? "#4ade80"
-                : connectionStatus === "Error"
-                ? "#fbbf24"
-                : "#f87171",
-            border:
-              connectionStatus === "Connected"
-                ? "1px solid rgba(34, 197, 94, 0.3)"
-                : connectionStatus === "Error"
-                ? "1px solid rgba(245, 158, 11, 0.3)"
-                : "1px solid rgba(239, 68, 68, 0.3)",
-            padding: "8px 12px",
-            borderRadius: "999px",
-            backdropFilter: "blur(10px)",
-            fontSize: "0.85rem",
-            zIndex: 50,
-          }}
-        >
-          {connectionStatus === "Connected" ? "🟢" : connectionStatus === "Error" ? "🟠" : "🔴"}{" "}
-          {connectionStatus}
+  // ---- WAITING VIEW ----
+  if (currentView === "waiting") {
+    return (
+      <div className="app">
+        <div className="container waiting-container">
+          {/* Show a different message if a player finished */}
+          {message ? (
+            <>
+              <h2>🏁 Finished!</h2>
+              <p>{message}</p>
+              <p>Waiting for other players...</p>
+            </>
+          ) : (
+            <>
+              <h2>Looking for a match...</h2>
+              <p>
+                Category: <strong>{selectedCategory?.name || "Any"}</strong>
+              </p>
+              <div className="spinner"></div> {/* You'll need to style this spinner */}
+              <p>
+                Players: {lobbyState.playerCount} / {lobbyState.maxPlayers}
+              </p>
+              <button className="cancel-button" onClick={cancelSearch}>
+                Cancel Search
+              </button>
+            </>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // ---- PLAYING VIEW ----
+  if (currentView === "playing") {
+    return (
+      <div className="app">
+        <div className="container playing-container">
+          <div className="game-header">
+            <span>
+              Question {gameState.questionIndex + 1} / {gameState.totalQuestions}
+            </span>
+            <div className="timer">Time: {timer}s</div>
+          </div>
+
+          <div className="question-container">
+            {/* Using dangerouslySetInnerHTML to render potential HTML in questions */}
+            <p dangerouslySetInnerHTML={{ __html: gameState.question }} />
+          </div>
+
+          <form onSubmit={submitAnswer} className="answer-form">
+            <input
+              type="text"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              placeholder="Your answer..."
+              disabled={!!answerResult || timer === 0} // Disable on result or time up
+              autoFocus
+            />
+            <button type="submit" disabled={!!answerResult || timer === 0}>
+              Submit
+            </button>
+          </form>
+
+          {answerResult && (
+            <div
+              className={`answer-feedback ${
+                answerResult.correct ? "correct" : "incorrect"
+              }`}
+            >
+              {answerResult.correct
+                ? `Correct! +${answerResult.score} pts`
+                : `Incorrect. The answer was: ${answerResult.correct_answer}`}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---- FINISHED VIEW ----
+  if (currentView === "finished") {
+    return (
+      <div className="app">
+        <div className="container finished-container">
+          <h2>Game Over!</h2>
+          <h3>
+            {gameState.winner === user.username
+              ? "🎉 You won! 🎉"
+              : `Winner: ${gameState.winner}`}
+          </h3>
+
+          <h4>Final Scores:</h4>
+          <div className="results-list">
+            {gameState.results
+              .sort((a, b) => b.score - a.score) // Sort by score descending
+              .map((player) => (
+                <div
+                  key={player.username}
+                  className={`result-item ${
+                    player.username === user.username ? "is-user" : ""
+                  }`}
+                >
+                  <span className="username">{player.username}</span>
+                  <span className="score">{player.score} pts</span>
+                </div>
+              ))}
+          </div>
+
+          <button className="home-button" onClick={handleBackToHome}>
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- HOME / MENU ----
+  if (currentView === "menu") {
+    return (
+      <div className="app">
+        <div className="container">
+          {/* Header */}
+          <div className="app-header">
+            <h1>🧠 MindMaze</h1>
+            <button className="logout-btn" onClick={logout}>
+              Logout
+            </button>
+          </div>
+
+          {/* User Info */}
+          <div className="user-info">
+            <p>
+              Welcome, <strong>{user.username}</strong>
+            </p>
+            <p>
+              Score: <strong>{user.score || 0}</strong>
+            </p>
+            <p
+              className={`status ${
+                connectionStatus.toLowerCase() === "connected"
+                  ? "connected"
+                  : connectionStatus.toLowerCase() === "error"
+                  ? "error"
+                  : "disconnected"
+              }`}
+            >
+              {connectionStatus}
+            </p>
+          </div>
+
+          {/* Banner */}
+          {message && <div className="message-banner">{message}</div>}
+
+          {/* Menu */}
+          <div className="menu">
+            <div className="menu-actions">
+              <button className="play-button" onClick={findMatch}>
+                🚀 Start Challenge
+              </button>
+              <button
+                className="refresh-button"
+                onClick={() => {
+                  loadStats();
+                  loadLeaderboard();
+                }}
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "24px",
+              }}
+            >
+              {/* Stats */}
+              <div className="stats">
+                <h3>📊 Live Stats</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">Total Users</span>
+                    <span className="stat-value">{stats.total_users || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Active Games</span>
+                    <span className="stat-value">{stats.active_games || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Online Now</span>
+                    <span className="stat-value">
+                      {stats.connected_players || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Leaderboard */}
+              <div className="leaderboard">
+                <h3>🏆 Leaderboard</h3>
+                {leaderboard.length === 0 ? (
+                  <p className="no-players">No players yet.</p>
+                ) : (
+                  <div className="leaderboard-list">
+                    {leaderboard.map((player, index) => (
+                      <div
+                        key={player.username || index}
+                        className="leaderboard-item"
+                      >
+                        <span className="rank">#{index + 1}</span>
+                        <span className="username">{player.username}</span>
+                        <span className="score">{player.score || 0} pts</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* WebSocket Status Bubble */}
+          <div
+            style={{
+              position: "fixed",
+              right: "18px",
+              bottom: "18px",
+              background:
+                connectionStatus === "Connected"
+                  ? "rgba(34, 197, 94, 0.2)"
+                  : connectionStatus === "Error"
+                  ? "rgba(245, 158, 11, 0.2)"
+                  : "rgba(239, 68, 68, 0.2)",
+              color:
+                connectionStatus === "Connected"
+                  ? "#4ade80"
+                  : connectionStatus === "Error"
+                  ? "#fbbf24"
+                  : "#f87171",
+              border:
+                connectionStatus === "Connected"
+                  ? "1px solid rgba(34, 197, 94, 0.3)"
+                  : connectionStatus === "Error"
+                  ? "1px solid rgba(245, 158, 11, 0.3)"
+                  : "1px solid rgba(239, 68, 68, 0.3)",
+              padding: "8px 12px",
+              borderRadius: "999px",
+              backdropFilter: "blur(10px)",
+              fontSize: "0.85rem",
+              zIndex: 50,
+            }}
+          >
+            {connectionStatus === "Connected"
+              ? "🟢"
+              : connectionStatus === "Error"
+              ? "🟠"
+              : "🔴"}{" "}
+            {connectionStatus}
+          </div>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;
