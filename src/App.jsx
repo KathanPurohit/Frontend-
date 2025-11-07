@@ -1,4 +1,3 @@
-// mindmaze-frontend/src/App.jsx
 import React, { useState, useEffect, useRef } from "react";
 import "./App.css";
 import LoginPage from "./LoginPage";
@@ -18,7 +17,7 @@ function App() {
 
   // ---- App/Game State ----
   const [ws, setWs] = useState(null);
-  const [currentView, setCurrentView] = useState(user ? "menu" : "login");
+  const [currentView, setCurrentView] = useState("menu"); // ✅ Default to menu (same as working version)
   const [gameState, setGameState] = useState({
     players: [],
     question: "",
@@ -42,7 +41,7 @@ function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // ---- API / WS URLs (Render-friendly with fallback to local) ----
+  // ---- API / WS URLs ----
   const API_BASE_URL =
     import.meta.env.VITE_API_URL || "https://backend-y4l4.onrender.com";
 
@@ -171,7 +170,7 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-        setCurrentView("menu"); // Home after login
+        setCurrentView("menu");
       } else {
         const err = await res.json();
         setMessage(err.detail || "Login failed");
@@ -194,7 +193,7 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-        setCurrentView("menu"); // Home after signup
+        setCurrentView("menu");
       } else {
         const err = await res.json();
         setMessage(err.detail || "Signup failed");
@@ -276,7 +275,7 @@ function App() {
     );
   }
 
-  // ---- HOME / MENU (Two-column dashboard using your existing CSS) ----
+  // ---- HOME / MENU ----
   return (
     <div className="app">
       <div className="container">
@@ -288,7 +287,7 @@ function App() {
           </button>
         </div>
 
-        {/* User Info Bar */}
+        {/* User Info */}
         <div className="user-info">
           <p>
             Welcome, <strong>{user.username}</strong>
@@ -309,22 +308,26 @@ function App() {
           </p>
         </div>
 
-        {/* Optional banner message */}
+        {/* Banner */}
         {message && <div className="message-banner">{message}</div>}
 
-        {/* Main menu content */}
+        {/* Menu */}
         <div className="menu">
-          {/* Actions */}
           <div className="menu-actions">
             <button className="play-button" onClick={findMatch}>
               🚀 Start Challenge
             </button>
-            <button className="refresh-button" onClick={() => { loadStats(); loadLeaderboard(); }}>
+            <button
+              className="refresh-button"
+              onClick={() => {
+                loadStats();
+                loadLeaderboard();
+              }}
+            >
               🔄 Refresh
             </button>
           </div>
 
-          {/* Two-column: Stats (left) + Leaderboard (right) */}
           <div
             style={{
               display: "grid",
@@ -332,7 +335,7 @@ function App() {
               gap: "24px",
             }}
           >
-            {/* Stats Card */}
+            {/* Stats */}
             <div className="stats">
               <h3>📊 Live Stats</h3>
               <div className="stats-grid">
@@ -351,7 +354,7 @@ function App() {
               </div>
             </div>
 
-            {/* Leaderboard Card */}
+            {/* Leaderboard */}
             <div className="leaderboard">
               <h3>🏆 Leaderboard</h3>
               {leaderboard.length === 0 ? (
@@ -371,7 +374,7 @@ function App() {
           </div>
         </div>
 
-        {/* Floating WebSocket Indicator (Option C) */}
+        {/* WebSocket Status Bubble */}
         <div
           style={{
             position: "fixed",
