@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import "./App.css";
+import "./App.css"; // This now matches the CSS you provided
 import LoginPage from "./LoginPage";
 import CategoryPage from "./CategoryPage";
 
@@ -39,7 +39,7 @@ function App() {
   const [connectionStatus, setConnectionStatus] = useState("Disconnected");
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState(null); // Added this state to track category
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   // ---- API / WS URLs ----
   const API_BASE_URL =
@@ -99,7 +99,7 @@ function App() {
             setGameState((gs) => ({
               ...gs,
               question: data.question,
-              questionIndex: data.question_index,
+              questionIndex: data.question_index, // Note: Your CSS uses questionIndex, not +1
               totalQuestions: data.total_questions,
               duration: data.duration,
             }));
@@ -110,6 +110,8 @@ function App() {
 
           case "answer_result":
             setAnswerResult(data);
+            // CSS doesn't have .answer-feedback, but your 2nd file did.
+            // Let's keep the timeout.
             setTimeout(() => setAnswerResult(null), 1500);
             break;
 
@@ -134,7 +136,7 @@ function App() {
             break;
 
           case "match_failed":
-            setCurrentView("categories"); // Go back to categories
+            setCurrentView("categories");
             setMessage(data.message);
             setTimeout(() => setMessage(""), 3000);
             break;
@@ -149,7 +151,7 @@ function App() {
     } else {
       sessionStorage.removeItem("user");
     }
-  }, [user?.username, WS_BASE_URL]); // Added WS_BASE_URL to dependency array
+  }, [user?.username, WS_BASE_URL]);
 
   // ---- Initial data fetch ----
   useEffect(() => {
@@ -222,7 +224,7 @@ function App() {
   const findMatch = () => setCurrentView("categories");
 
   const handleCategorySelect = (category) => {
-    setSelectedCategory(category); // Keep track of the selected category
+    setSelectedCategory(category);
     if (ws) ws.send(JSON.stringify({ type: "find_match", category: category.id }));
   };
 
@@ -247,7 +249,7 @@ function App() {
 
   const logout = () => {
     setUser(null);
-    setCurrentView("login"); // Go to login, not just set user to null
+    setCurrentView("login");
   };
 
   // ---- Views ----
@@ -270,123 +272,149 @@ function App() {
         onSelectCategory={handleCategorySelect}
         onBackToHome={handleBackToHome}
         user={user}
-        // Pass message to CategoryPage if you want to show "match_failed"
         message={message}
       />
     );
   }
 
-  // ---- WAITING VIEW ----
+  // ---- WAITING VIEW (Uses .waiting class from your CSS) ----
   if (currentView === "waiting") {
     return (
       <div className="app">
-        <div className="container waiting-container">
-          {/* Show a different message if a player finished */}
-          {message ? (
-            <>
-              <h2>🏁 Finished!</h2>
-              <p>{message}</p>
-              <p>Waiting for other players...</p>
-            </>
-          ) : (
-            <>
-              <h2>Looking for a match...</h2>
-              <p>
-                Category: <strong>{selectedCategory?.name || "Any"}</strong>
-              </p>
-              <div className="spinner"></div> {/* You'll need to style this spinner */}
-              <p>
-                Players: {lobbyState.playerCount} / {lobbyState.maxPlayers}
-              </p>
-              <button className="cancel-button" onClick={cancelSearch}>
-                Cancel Search
-              </button>
-            </>
-          )}
+        <div className="container">
+          <div className="waiting">
+            {message ? (
+              <>
+                <h2>🏁 Finished!</h2>
+                <p>{message}</p>
+                <p>Waiting for other players...</p>
+                <div className="spinner">⟳</div>
+              </>
+            ) : (
+              <>
+                <h2>🔍 Waiting for Players...</h2>
+                <div className="spinner">⟳</div>
+                <p>
+                  Category: <strong>{selectedCategory?.name || "Any"}</strong>
+                </p>
+                <p>
+                  Players: {lobbyState.playerCount} / {lobbyState.maxPlayers}
+                </p>
+                <button className="cancel-button" onClick={cancelSearch}>
+                  Cancel Search
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  // ---- PLAYING VIEW ----
+  // ---- PLAYING VIEW (Uses .game, .puzzle-container, etc. from your CSS) ----
   if (currentView === "playing") {
     return (
       <div className="app">
-        <div className="container playing-container">
-          <div className="game-header">
-            <span>
+        <div className="container">
+          <div className="game">
+            <h2>
               Question {gameState.questionIndex + 1} / {gameState.totalQuestions}
-            </span>
-            <div className="timer">Time: {timer}s</div>
-          </div>
-
-          <div className="question-container">
-            {/* Using dangerouslySetInnerHTML to render potential HTML in questions */}
-            <p dangerouslySetInnerHTML={{ __html: gameState.question }} />
-          </div>
-
-          <form onSubmit={submitAnswer} className="answer-form">
-            <input
-              type="text"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Your answer..."
-              disabled={!!answerResult || timer === 0} // Disable on result or time up
-              autoFocus
-            />
-            <button type="submit" disabled={!!answerResult || timer === 0}>
-              Submit
-            </button>
-          </form>
-
-          {answerResult && (
-            <div
-              className={`answer-feedback ${
-                answerResult.correct ? "correct" : "incorrect"
-              }`}
-            >
-              {answerResult.correct
-                ? `Correct! +${answerResult.score} pts`
-                : `Incorrect. The answer was: ${answerResult.correct_answer}`}
+            </h2>
+            
+            {/* CSS has .timer-bar-container, but this is simpler for now */}
+            <div style={{ textAlign: "center", fontSize: "1.2rem", color: "var(--text-secondary)" }}>
+              Time Left: <strong>{timer}s</strong>
             </div>
-          )}
+
+            <div className="puzzle-container">
+              <div className="puzzle-question">
+                <h3 dangerouslySetInnerHTML={{ __html: gameState.question }} />
+              </div>
+
+              <form onSubmit={submitAnswer} className="answer-form">
+                <div className="answer-section">
+                  <input
+                    type="text"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="Type your answer..."
+                    className="answer-input"
+                    disabled={!!answerResult || timer === 0}
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="submit-answer-btn"
+                    disabled={!!answerResult || timer === 0}
+                  >
+                    Submit
+                  </button>
+                </div>
+              </form>
+
+              {answerResult && (
+                <div
+                  // This class is missing from your CSS, so it might not show colors
+                  className={`answer-feedback ${
+                    answerResult.correct ? "correct" : "incorrect"
+                  }`}
+                  style={{ marginTop: "1rem", fontWeight: "bold", fontSize: "1.1rem" }}
+                >
+                  {answerResult.correct
+                    ? `Correct! +${answerResult.score} pts`
+                    : `Incorrect. The answer was: ${answerResult.correct_answer}`}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ---- FINISHED VIEW ----
+  // ---- FINISHED VIEW (Uses .finished class from your CSS) ----
   if (currentView === "finished") {
     return (
       <div className="app">
-        <div className="container finished-container">
-          <h2>Game Over!</h2>
-          <h3>
-            {gameState.winner === user.username
-              ? "🎉 You won! 🎉"
-              : `Winner: ${gameState.winner}`}
-          </h3>
+        <div className="container">
+          <div className="finished">
+            <h2>🎉 Game Over!</h2>
+            <h3>
+              {gameState.winner === user.username
+                ? "You won!"
+                : `Winner: ${gameState.winner}`}
+            </h3>
 
-          <h4>Final Scores:</h4>
-          <div className="results-list">
-            {gameState.results
-              .sort((a, b) => b.score - a.score) // Sort by score descending
-              .map((player) => (
-                <div
-                  key={player.username}
-                  className={`result-item ${
-                    player.username === user.username ? "is-user" : ""
-                  }`}
-                >
-                  <span className="username">{player.username}</span>
-                  <span className="score">{player.score} pts</span>
-                </div>
-              ))}
+            {/* This re-uses the leaderboard styles from your CSS */}
+            <div className="leaderboard" style={{ marginTop: "32px" }}>
+              <h4>Final Scores:</h4>
+              <div className="leaderboard-list">
+                {gameState.results
+                  .sort((a, b) => b.score - a.score)
+                  .map((player, index) => (
+                    <div
+                      key={player.username}
+                      className={`leaderboard-item ${
+                        player.username === user.username ? "is-user" : ""
+                      } ${player.username === gameState.winner ? "winner" : ""}`}
+                    >
+                      <span className="rank">#{index + 1}</span>
+                      <span className="username">{player.username}</span>
+                      <span className="score">{player.score} pts</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="finished-actions">
+              <button className="play-button" onClick={() => setCurrentView("categories")}>
+                🎮 Play Another
+              </button>
+              <button className="secondary-button" onClick={handleBackToHome}>
+                🏠 Back to Home
+              </button>
+            </div>
           </div>
-
-          <button className="home-button" onClick={handleBackToHome}>
-            Back to Home
-          </button>
         </div>
       </div>
     );
@@ -497,7 +525,7 @@ function App() {
             </div>
           </div>
 
-          {/* WebSocket Status Bubble */}
+          {/* WebSocket Status Bubble (From your original file, doesn't need CSS class) */}
           <div
             style={{
               position: "fixed",
