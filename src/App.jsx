@@ -70,7 +70,7 @@ function App() {
   // ---- WebSocket lifecycle ----
   useEffect(() => {
     if (user?.username) {
-      sessionStorage.setItem("user", JSON.stringify(user));
+      // sessionStorage.setItem("user", JSON.stringify(user)); // <-- REMOVED from here
       const websocket = new WebSocket(`${WS_BASE_URL}/ws/${user.username}`);
 
       websocket.onopen = () => setConnectionStatus("Connected");
@@ -99,7 +99,7 @@ function App() {
             setGameState((gs) => ({
               ...gs,
               question: data.question,
-              questionIndex: data.question_index, // Note: Your CSS uses questionIndex, not +1
+              questionIndex: data.question_index,
               totalQuestions: data.total_questions,
               duration: data.duration,
             }));
@@ -110,8 +110,6 @@ function App() {
 
           case "answer_result":
             setAnswerResult(data);
-            // CSS doesn't have .answer-feedback, but your 2nd file did.
-            // Let's keep the timeout.
             setTimeout(() => setAnswerResult(null), 1500);
             break;
 
@@ -130,6 +128,7 @@ function App() {
             }));
             const my = data.results.find((r) => r.username === user.username);
             if (my && my.new_total_score !== undefined) {
+              // This line was already correct!
               setUser((prev) => ({ ...prev, score: my.new_total_score }));
             }
             loadLeaderboard();
@@ -149,9 +148,18 @@ function App() {
       setWs(websocket);
       return () => websocket.close();
     } else {
-      sessionStorage.removeItem("user");
+      // sessionStorage.removeItem("user"); // <-- REMOVED from here
     }
   }, [user?.username, WS_BASE_URL]);
+
+  // ⭐️ ---- FIX 1: ADDED THIS EFFECT TO SYNC STATE TO SESSION STORAGE ---- ⭐️
+  useEffect(() => {
+    if (user) {
+      sessionStorage.setItem("user", JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem("user");
+    }
+  }, [user]); // This runs EVERY time the user object changes (including score)
 
   // ---- Initial data fetch ----
   useEffect(() => {
@@ -321,7 +329,6 @@ function App() {
               Question {gameState.questionIndex + 1} / {gameState.totalQuestions}
             </h2>
             
-            {/* CSS has .timer-bar-container, but this is simpler for now */}
             <div style={{ textAlign: "center", fontSize: "1.2rem", color: "var(--text-secondary)" }}>
               Time Left: <strong>{timer}s</strong>
             </div>
@@ -354,7 +361,6 @@ function App() {
 
               {answerResult && (
                 <div
-                  // This class is missing from your CSS, so it might not show colors
                   className={`answer-feedback ${
                     answerResult.correct ? "correct" : "incorrect"
                   }`}
@@ -385,7 +391,6 @@ function App() {
                 : `Winner: ${gameState.winner}`}
             </h3>
 
-            {/* This re-uses the leaderboard styles from your CSS */}
             <div className="leaderboard" style={{ marginTop: "32px" }}>
               <h4>Final Scores:</h4>
               <div className="leaderboard-list">
@@ -439,6 +444,7 @@ function App() {
               Welcome, <strong>{user.username}</strong>
             </p>
             <p>
+              {/* This will now be correctly in sync */}
               Score: <strong>{user.score || 0}</strong>
             </p>
             <p
@@ -474,10 +480,11 @@ function App() {
               </button>
             </div>
 
+            {/* ⭐️ ---- FIX 2: MODIFIED THE gridTemplateColumns STYLE ---- ⭐️ */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gridTemplateColumns: "1fr 1fr", // <-- Forces 2 columns
                 gap: "24px",
               }}
             >
@@ -525,7 +532,7 @@ function App() {
             </div>
           </div>
 
-          {/* WebSocket Status Bubble (From your original file, doesn't need CSS class) */}
+          {/* WebSocket Status Bubble */}
           <div
             style={{
               position: "fixed",
