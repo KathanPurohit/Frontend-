@@ -394,6 +394,13 @@
   margin: 0 16px;
 }
 
+.time {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-right: 16px;
+}
+
 .score {
   font-weight: 600;
   color: var(--accent-teal);
