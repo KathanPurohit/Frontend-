@@ -402,6 +402,10 @@ function App() {
                     >
                       <span className="rank">#{index + 1}</span>
                       <span className="username">{player.username}</span>
+                      <span className="time" title="Total time taken">
+                        {/* Display the time taken to answer */}
+                        {player.time}s
+                      </span>
                       <span className="score">{player.score} pts</span>
                     </div>
                   ))}
